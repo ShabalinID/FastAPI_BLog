@@ -13,9 +13,13 @@
     <div id="sidebar">
         <h2>Menu</h2>
         <p><a href="/">Home</a></p>
-        <p><a href="/blog/new_message">New message</a></p>
-        <p><a href="/user/login">Log in</a></p>
-        <p><a href="/user/singup">Sing up</a></p>
+        {% if current_user %}
+            <p><a href="/blog/new_message">New message</a></p>
+            <p><a href="/user/logout">Log out</a></p>
+        {% else %}
+            <p><a href="/user/login">Log in</a></p>
+            <p><a href="/user/singup">Sing up</a></p>
+        {% endif %}
     </div>
 </body>
 </html>

@@ -9,7 +9,7 @@
     <h2>{{status}}</h2>
 {% endif %}
 <form action="{{ request.path }}" enctype="multipart/form-data" method="post">
-    <h1>Author {{author}}</h1>
+    <h1>Author {{current_user}}</h1>
     <label>
         <h2>Your Message</h2>
         <textarea name="body" rows="10" cols="50"></textarea>

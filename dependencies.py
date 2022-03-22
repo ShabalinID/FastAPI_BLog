@@ -1,4 +1,4 @@
-from fastapi import Form, UploadFile
+from fastapi import Form, UploadFile, Request
 from typing import Optional, List
 from pydantic import HttpUrl
 
@@ -17,4 +17,3 @@ class MessageForm:
         if not (self.body or self.link or self.media_list):
             return True
         return False
-
