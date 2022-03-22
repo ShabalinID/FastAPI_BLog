@@ -10,13 +10,17 @@ from database.core import SqliteDatabase
 from models.models import MessageForm, User, MessageDB
 import auth
 
-
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 database_name = "sqlite.db"
 database = SqliteDatabase(database_name=database_name)
+
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url='/blog/')
 
 
 @app.get("/blog/")
