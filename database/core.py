@@ -8,9 +8,6 @@ class CoreDB:
         self.connection.row_factory = sqlite3.Row
         self.cursor = self.connection.cursor()
 
-    def __del__(self):
-        self.connection.close()
-
     def insert_pydantic_scheme(self, scheme, table_name):
         columns = ", ".join(scheme.dict().keys())  # As str "column1, column2, ... , columnN"
         values = list(scheme.dict().values())  # As list [value1, value2, ... , value]

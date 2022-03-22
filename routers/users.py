@@ -1,9 +1,9 @@
-from fastapi import Request, Depends, APIRouter
+from fastapi import Request, Depends, APIRouter, Response, Cookie
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import HTMLResponse
-# TODO import PyOpenGraph
+
 
 from database.users import UserDatabase
 from models import User
@@ -31,12 +31,24 @@ async def get_login_form(request: Request):
         return "Already authorized"
 
 
+@router.get("/me", response_model=User)
+async def read_users_me(current_user: User = Depends(security.get_current_user)):
+    return current_user
+
+
 @router.post("/login", response_class=HTMLResponse)
 async def post_login_form(request: Request,
+                          response: Response,
                           form_data: OAuth2PasswordRequestForm = Depends()):
-    hashed_password = await users_database.get_user_password(username=form_data.username)
-    login_status = await security.verify_password(plain_password=form_data.password,
-                                                  hashed_password=hashed_password)
+    authorized_user = security.authenticate_user(username=form_data.username,
+                                                 password=form_data.password)
+    if not authorized_user:
+        login_status = "False"
+    else:
+        login_status = "True"
+        access_token = security.get_access_token(authorized_user)
+        print(access_token)
+        response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True)
     return templates.TemplateResponse("users/login.html", {"request": request,
                                                            "login_status": login_status})
 

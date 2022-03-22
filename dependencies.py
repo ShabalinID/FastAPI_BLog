@@ -17,3 +17,4 @@ class MessageForm:
         if not (self.body or self.link or self.media_list):
             return True
         return False
+
