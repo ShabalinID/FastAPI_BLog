@@ -1,16 +1,8 @@
-from models.models import User
+from models import User
+from database.core import CoreDB
 
 
-class AuthDatabase:
-    def insert_pydantic_scheme(self, scheme, table_name):
-        columns = ", ".join(scheme.dict().keys())  # As str "column1, column2, ... , columnN"
-        values = list(scheme.dict().values())  # As list [value1, value2, ... , value]
-        sql = f"INSERT INTO {table_name} " \
-              f"({columns}) " \
-              f"VALUES ({(len(values) * '?, ')[:-2]})"  # Forming a list of values (?, ?, ... ?) for secured SQL request
-        self.cursor.execute(sql, values)
-        self.connection.commit()
-
+class UserDatabase(CoreDB):
     async def get_user_name_id(self, username):
         sql = "SELECT user_id " \
               "FROM users " \

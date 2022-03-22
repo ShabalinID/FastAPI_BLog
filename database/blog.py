@@ -1,16 +1,8 @@
-from models.models import MessageDB
+from models import Message
+from database.core import CoreDB
 
 
-class MessagesDatabase:
-    def insert_pydantic_scheme(self, scheme, table_name):
-        columns = ", ".join(scheme.dict().keys())  # As str "column1, column2, ... , columnN"
-        values = list(scheme.dict().values())  # As list [value1, value2, ... , value]
-        sql = f"INSERT INTO {table_name} " \
-              f"({columns}) " \
-              f"VALUES ({(len(values) * '?, ')[:-2]})"  # Forming a list of values (?, ?, ... ?) for secured SQL request
-        self.cursor.execute(sql, values)
-        self.connection.commit()
-
+class MessagesDatabase(CoreDB):
     async def get_all_messages(self):
         sql = "SELECT * " \
               "FROM messages " \
@@ -19,7 +11,7 @@ class MessagesDatabase:
         result = self.cursor.fetchall()
         messages = []
         for row in result:
-            messages.append(MessageDB(**row))
+            messages.append(Message(**row))
         return messages
 
     async def get_message_details(self, message_id):
@@ -30,7 +22,7 @@ class MessagesDatabase:
         result = self.cursor.fetchone()
         return result
 
-    async def insert_new_message(self, message: MessageDB):
+    async def insert_new_message(self, message: Message):
         table_name = "messages"
         self.insert_pydantic_scheme(table_name=table_name,
                                     scheme=message)

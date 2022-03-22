@@ -1,6 +1,6 @@
 from fastapi import Form, UploadFile
 from typing import Optional, List
-from pydantic import BaseModel, HttpUrl
+from pydantic import HttpUrl
 
 
 class MessageForm:
@@ -17,17 +17,3 @@ class MessageForm:
         if not (self.body or self.link or self.media_list):
             return True
         return False
-
-
-class MessageDB(BaseModel):
-    message_id: Optional[int] = None
-    author: str
-    published: str
-    body: Optional[str] = ""
-    link: Optional[str] = None
-
-
-class User(BaseModel):
-    user_id: Optional[int] = None
-    username: str
-    hashed_password: str
