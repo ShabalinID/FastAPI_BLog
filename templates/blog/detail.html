@@ -1,0 +1,12 @@
+{% extends "./base.html" %}
+
+{% block title %}
+<title>
+    {{ message.body | truncate(length=30) }}
+</title>
+{% endblock %}
+
+{% block content %}
+    <p class="date">Published {{ message.published }} by {{ message.author }}</p>
+    {{message.body}}
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "./base.html" %}
+
+{% block title %}
+    <title>Blog</title>
+{% endblock %}
+
+
+{% block content %}
+    <h1>Blog</h1>
+    {% for message in messages %}
+        <h2>
+            {{ message.body | truncate(length=30) }}
+        </h2>
+        <a href="{{ request.path }}{{message.message_id}}">
+            [Post detail]
+        </a>
+        <p class="date">
+            Published {{ message.published }} by {{ message.author }}
+        </p>
+    {% endfor %}
+{% endblock %}

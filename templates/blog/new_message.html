@@ -1,0 +1,27 @@
+{% extends "./base.html" %}
+
+{% block title %}
+    <title>Share a post</title>
+{% endblock %}
+
+{% block content %}
+{% if request.method == "POST" %}
+    <h2>{{status}}</h2>
+{% endif %}
+<form action="{{ request.path }}" enctype="multipart/form-data" method="post">
+    <h1>Author {{author}}</h1>
+    <label>
+        <h2>Your Message</h2>
+        <textarea name="body" rows="10" cols="50"></textarea>
+    </label>
+    <label>
+        <h2>Share a link:</h2>
+        <input type="text" name="link" size="50">
+    </label>
+    <label>
+        <h2>Add media files:</h2>
+        <input name="files" type="file" multiple>
+    </label>
+    <input type="submit" value="New message!">
+</form>
+{% endblock %}

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+{% block title %}
+    <title>Blog for KODE</title>
+{% endblock %}
+    <link href="{{ url_for('static', path='css/blog.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div id="content">
+        {% block content %}{% endblock %}
+    </div>
+    <div id="sidebar">
+        <h2>Menu</h2>
+        <p><a href="/">Home</a></p>
+        <p><a href="/blog/new_message">New message</a></p>
+        <p><a href="/user/login">Log in</a></p>
+        <p><a href="/user/singup">Sing up</a></p>
+    </div>
+</body>
+</html>
