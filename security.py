@@ -60,7 +60,6 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-@router.post("/token", response_model=Token)
 def get_access_token(user: User,
                      response: Response):
     if not user:
@@ -106,3 +105,5 @@ def get_current_user(request: Request):
 
 def log_out(response: Response):
     response.delete_cookie(key="access_token")
+
+

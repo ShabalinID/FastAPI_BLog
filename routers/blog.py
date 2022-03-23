@@ -45,7 +45,7 @@ async def post_new_message(request: Request,
     current_user = security.get_current_user(request)
     author = current_user
     if form_data.message_is_empty():
-        status = "You need to feel one of the field for new Post!"
+        status = "You need to fill one of the field for new Post!"
     else:
         message = Message(
             author=author,

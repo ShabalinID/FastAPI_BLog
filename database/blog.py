@@ -40,3 +40,4 @@ class MessagesDatabase(CoreDB):
               "WHERE message_id=:message_id"
         self.cursor.execute(sql, {"message_id": message_id})
         self.cursor.fetchone()
+        self.connection.commit()
