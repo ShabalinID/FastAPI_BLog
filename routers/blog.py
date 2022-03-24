@@ -30,28 +30,16 @@ message_database = MessagesDatabase(database_name=database_name)
 
 @router.get("/", response_class=HTMLResponse)
 async def blog_list():
-    return RedirectResponse(url="/blog/list/0")
+    return RedirectResponse(url="list")
 
 
-@router.get("/list/{cur_page}", response_class=HTMLResponse)
-async def blog_list(request: Request, cur_page: Optional[int] = 0):
+@router.get("/list", response_class=HTMLResponse)
+async def blog_list(request: Request):
     current_user = security.get_current_user(request)
-    all_messages = message_database.get_all_messages()
-    page = Page(page=cur_page,
-                objects=all_messages,
-                max_items=5)
-    messages = messages_paginate(messages=all_messages,
-                                 page=cur_page)
-    print(page.next_page, page.previous_page)
+    messages = message_database.get_all_messages()
     return templates.TemplateResponse("blog/list.html", {"request": request,
                                                          "current_user": current_user,
                                                          "messages": messages})
-
-
-def messages_paginate(messages, page):
-    max_message = 5
-    messages = messages[page * max_message:(page + 1) * max_message]
-    return messages
 
 
 @router.get("/new_message", response_class=HTMLResponse)
