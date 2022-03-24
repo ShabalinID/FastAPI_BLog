@@ -23,3 +23,11 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+
+class Media(BaseModel):
+    media_id: Optional[int] = None
+    media_url: str
+    media_type: str
+    message_id: int
+

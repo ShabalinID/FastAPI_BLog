@@ -47,6 +47,11 @@ p.date {
     font-weight:bold;
 }
 
+.image{
+     height: 120px;
+     width: auto;
+}
+
 /* forms */
 label {
     float:left;
@@ -90,4 +95,3 @@ input[type=submit] {
     font-size:12px;
     color:#666;
 }
-

@@ -8,11 +8,11 @@ from jose import JWTError, jwt, ExpiredSignatureError
 from passlib.context import CryptContext
 
 from database.users import UserDatabase
-from models import User, Token, TokenData
+from models import User, TokenData
 
 SECRET_KEY = "dc56abe097584455ea1b39cc26b08d3113554776679ac4d5acd4504fd6a297d3"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 300
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -78,6 +78,7 @@ def get_access_token(user: User,
 def get_current_user(request: Request):
     token = request.cookies.get('access_token')
     if token is not None:
+        response = JSONResponse()
         credentials_exception = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -90,7 +91,6 @@ def get_current_user(request: Request):
                 raise credentials_exception
             token_data = TokenData(username=username)
         except ExpiredSignatureError:
-            response = JSONResponse()
             response.delete_cookie(key="access_token")
             return None
         except JWTError:
@@ -105,5 +105,4 @@ def get_current_user(request: Request):
 
 def log_out(response: Response):
     response.delete_cookie(key="access_token")
-
 

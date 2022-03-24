@@ -15,7 +15,7 @@
             [Post detail]
         </a>
         {% if message.author == current_user %}
-            <a href="{{ request.path }}delete/{{message.message_id}}">
+            <a href="/blog/delete/{{message.message_id}}">
                 [Delete message]
             </a>
         {% endif %}

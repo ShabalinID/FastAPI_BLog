@@ -1,10 +1,15 @@
 from datetime import datetime
 from fastapi import Request, Depends, APIRouter
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from os import getcwd
 # TODO import PyOpenGraph
+from fastapi_pagination import Page, add_pagination, paginate, Params
 
+from paginator import Page
+
+from typing import Optional
 from database.blog import MessagesDatabase
 from models import Message
 from dependencies import MessageForm
@@ -24,12 +29,29 @@ message_database = MessagesDatabase(database_name=database_name)
 
 
 @router.get("/", response_class=HTMLResponse)
-async def blog_list(request: Request):
+async def blog_list():
+    return RedirectResponse(url="/blog/list/0")
+
+
+@router.get("/list/{cur_page}", response_class=HTMLResponse)
+async def blog_list(request: Request, cur_page: Optional[int] = 0):
     current_user = security.get_current_user(request)
-    messages = message_database.get_all_messages()
+    all_messages = message_database.get_all_messages()
+    page = Page(page=cur_page,
+                objects=all_messages,
+                max_items=5)
+    messages = messages_paginate(messages=all_messages,
+                                 page=cur_page)
+    print(page.next_page, page.previous_page)
     return templates.TemplateResponse("blog/list.html", {"request": request,
                                                          "current_user": current_user,
                                                          "messages": messages})
+
+
+def messages_paginate(messages, page):
+    max_message = 5
+    messages = messages[page * max_message:(page + 1) * max_message]
+    return messages
 
 
 @router.get("/new_message", response_class=HTMLResponse)
@@ -54,6 +76,9 @@ async def post_new_message(request: Request,
             link=form_data.link
         )
         message_database.insert_new_message(message)
+        if form_data.have_media():
+            await message_database.save_message_media(message=message,
+                                                      media_list=form_data.media_list)
         status = "New message was added!"
     return templates.TemplateResponse("blog/new_message.html", {"request": request,
                                                                 "current_user": current_user,
@@ -67,9 +92,18 @@ async def get_message_detail(request: Request,
     db_result = message_database.get_message_details(message_id=message_id)
     if db_result:
         message = Message(**db_result)
+        media_list = message_database.get_media_list(message_id=message_id)
+        images, videos = [], []
+        for media in media_list:
+            if media.media_type.startswith("image"):
+                images.append(media)
+            elif media.media_type.startswith("video"):
+                videos.append(media)
         return templates.TemplateResponse("blog/detail.html", {"request": request,
                                                                "current_user": current_user,
-                                                               "message": message})
+                                                               "message": message,
+                                                               "images": images,
+                                                               "videos": videos})
     else:
         return RedirectResponse(url='/blog/')
 
@@ -82,3 +116,10 @@ async def get_delete_message(request: Request,
     if message_author == current_user:
         message_database.delete_message(message_id=message_id)
     return RedirectResponse(url='/blog/')
+
+
+@router.get("/file/{name_file}")
+def get_file(name_file: str):
+    media_path = "/database/data/media/"
+    response = FileResponse(path=getcwd() + media_path + name_file)
+    return response
