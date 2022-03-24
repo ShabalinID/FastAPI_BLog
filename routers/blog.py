@@ -1,15 +1,15 @@
 from datetime import datetime
 from fastapi import Request, Depends, APIRouter
-from fastapi.responses import RedirectResponse, HTMLResponse, FileResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from os import getcwd
+import json
 # TODO import PyOpenGraph
 from fastapi_pagination import Page, add_pagination, paginate, Params
 
-from paginator import Page
-
 from typing import Optional
+
 from database.blog import MessagesDatabase
 from models import Message
 from dependencies import MessageForm
@@ -18,7 +18,6 @@ import security
 router = APIRouter(
     prefix="/blog",
     tags=["blog"],
-    default_response_class=HTMLResponse,
 )
 
 router.mount("/static", StaticFiles(directory="static"), name="static")
@@ -28,18 +27,13 @@ database_name = "sqlite.db"
 message_database = MessagesDatabase(database_name=database_name)
 
 
-@router.get("/", response_class=HTMLResponse)
+@router.get("/list", response_model=Page[Message])
 async def blog_list():
-    return RedirectResponse(url="list")
-
-
-@router.get("/list", response_class=HTMLResponse)
-async def blog_list(request: Request):
-    current_user = security.get_current_user(request)
     messages = message_database.get_all_messages()
-    return templates.TemplateResponse("blog/list.html", {"request": request,
-                                                         "current_user": current_user,
-                                                         "messages": messages})
+    return paginate(messages)
+
+
+add_pagination(router)
 
 
 @router.get("/new_message", response_class=HTMLResponse)
