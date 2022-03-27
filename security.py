@@ -1,24 +1,23 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import HTTPException, status, APIRouter, Response, Request
+from fastapi import HTTPException, status, APIRouter, Depends
 from fastapi.security import OAuth2PasswordBearer
-from fastapi.responses import JSONResponse
-from jose import JWTError, jwt, ExpiredSignatureError
+from jose import JWTError, jwt
 from passlib.context import CryptContext
+from decouple import config
 
 from database.users import UserDatabase
 from models import User, TokenData
 
-SECRET_KEY = "dc56abe097584455ea1b39cc26b08d3113554776679ac4d5acd4504fd6a297d3"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 300
-
+SECRET_KEY = config('SECRET_KEY')
+ALGORITHM = config('ALGORITHM')
+ACCESS_TOKEN_EXPIRE_MINUTES = int(config('ACCESS_TOKEN_EXPIRE_MINUTES'))
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="user/login")
 
-database_name = "sqlite.db"
-users_database = UserDatabase(database_name=database_name)
+database_path = config("database_path")
+blog_database = UserDatabase(database_path=database_path)
 
 router = APIRouter()
 
@@ -60,8 +59,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-def get_access_token(user: User,
-                     response: Response):
+def get_access_token(user: User):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -71,38 +69,24 @@ def get_access_token(user: User,
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": user.username},
                                        expires_delta=access_token_expires)
-    response.set_cookie(key="access_token", value=access_token, httponly=True)
-    return {"access_token": access_token, "token_type": "bearer"}
+    return access_token
 
 
-def get_current_user(request: Request):
-    token = request.cookies.get('access_token')
-    if token is not None:
-        response = JSONResponse()
-        credentials_exception = HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-        try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            username: str = payload.get("sub")
-            if username is None:
-                raise credentials_exception
-            token_data = TokenData(username=username)
-        except ExpiredSignatureError:
-            response.delete_cookie(key="access_token")
-            return None
-        except JWTError:
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
             raise credentials_exception
-        user = get_user(username=token_data.username)
-        if user is None:
-            raise credentials_exception
-        return user.username
-    else:
-        return None
-
-
-def log_out(response: Response):
-    response.delete_cookie(key="access_token")
-
+        token_data = TokenData(username=username)
+    except JWTError:
+        raise credentials_exception
+    user = get_user(username=token_data.username)
+    if user is None:
+        raise credentials_exception
+    return user.username

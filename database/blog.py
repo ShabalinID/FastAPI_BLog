@@ -3,18 +3,26 @@ import aiofiles
 import mimetypes
 
 from database.core import CoreDB
-from models import Message, Media
+from models import Message, Media, Like
 
 MEDIA_PATH = "database/data/media/"
 
 
-class MessagesDatabase(CoreDB):
-    def get_all_messages(self):
+class BlogDatabase(CoreDB):
+
+    #  Message operations
+    def insert_new_message(self, message: Message):
+        table_name = "messages"
+        self.insert_pydantic_scheme(table_name=table_name,
+                                    scheme=message)
+
+    async def get_all_messages(self):
         sql = "SELECT * " \
               "FROM messages " \
               "ORDER BY message_id DESC"
-        self.cursor.execute(sql)
-        result = self.cursor.fetchall()
+        db = await self.get_database_connection()
+        cursor = await db.execute(sql)
+        result = await cursor.fetchall()
         messages = []
         for row in result:
             messages.append(Message(**row))
@@ -28,47 +36,37 @@ class MessagesDatabase(CoreDB):
         result = self.cursor.fetchone()
         return result
 
-    def insert_new_message(self, message: Message):
-        table_name = "messages"
-        self.insert_pydantic_scheme(table_name=table_name,
-                                    scheme=message)
-
     def is_author(self, message_id):
         sql = "SELECT author " \
               "FROM messages " \
               "WHERE message_id=:message_id"
         self.cursor.execute(sql, {"message_id": message_id})
-        result = self.cursor.fetchone()
-        if result:
-            return result[0]
-        return
+        result = self.cursor.fetchone()[0]
+        return result
 
     def delete_message(self, message_id):
         sql = "DELETE FROM messages " \
               "WHERE message_id=:message_id"
         self.cursor.execute(sql, {"message_id": message_id})
-        self.connection.commit()
+        self.cursor.commit()
         self.delete_message_media(message_id=message_id)
 
-    def delete_message_media(self, message_id):
-        media_list = self.get_media_list(message_id=message_id)
-        for file in media_list:
-            os.remove(os.getcwd() + "/" + MEDIA_PATH + file.media_url)
-        sql = "DELETE FROM media " \
-              "WHERE message_id=:message_id"
-        self.cursor.execute(sql, {"message_id": message_id})
-        self.connection.commit()
-
+    #  Media operations
     async def save_message_media(self, message, media_list):
         message_id = self.get_message_id(message=message)
         for num, file in enumerate(media_list):
             extension = self.get_media_extension(filename=file.filename)
             media_type = self.get_media_type(filename=file.filename)
 
-            filename = f"{message.author}_{message.published}_{message_id}_{num}{extension}"
+            file_path = os.getcwd() + "/" + MEDIA_PATH
+            filename = f"{message.author}_" \
+                       f"{message.published}_" \
+                       f"{message_id}_" \
+                       f"{num}" \
+                       f"{extension}"  # e.g. admin_26-03-2022_00:07:26_105_0.jpeg
             await self.file_safe(file, filename)
 
-            media = Media(media_url=filename,
+            media = Media(media_url=file_path + filename,
                           media_type=media_type,
                           message_id=message_id)
             self.insert_media(media)
@@ -114,3 +112,43 @@ class MessagesDatabase(CoreDB):
         for row in result:
             media_list.append(Media(**row))
         return media_list
+
+    def delete_message_media(self, message_id):
+        media_list = self.get_media_list(message_id=message_id)
+        for file in media_list:
+            os.remove(file.media_url)
+        sql = "DELETE FROM media " \
+              "WHERE message_id=:message_id"
+        self.cursor.execute(sql, {"message_id": message_id})
+        self.cursor.commit()
+
+    #  Like operations
+    def get_message_likes(self, message_id):
+        sql = "SELECT COUNT(message_id) as Likes " \
+              "FROM likes " \
+              "WHERE message_id=:message_id"
+        self.cursor.execute(sql, {"message_id": message_id})
+        result = self.cursor.fetchone()[0]
+        return result
+        pass
+
+    def message_is_liked(self, message_id, username):
+        sql = "SELECT * " \
+              "FROM likes " \
+              "WHERE message_id=:message_id AND username=:username"
+        self.cursor.execute(sql, {"message_id": message_id, "username": username})
+        result = self.cursor.fetchone()
+        return result
+
+    def insert_like(self, message_id, username):
+        table_name = "likes"
+        like = Like(message_id=message_id,
+                    username=username)
+        self.insert_pydantic_scheme(table_name=table_name,
+                                    scheme=like)
+
+    async def unlike_message(self, message_id, username):
+        sql = "DELETE FROM likes " \
+              "WHERE message_id=:message_id AND username=:username"
+        data = {"message_id": message_id, "username": username}
+        await self.delete(sql=sql, data=data)

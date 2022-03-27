@@ -1,89 +1,52 @@
-from fastapi import Request, Depends, APIRouter
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from fastapi.security import OAuth2PasswordRequestForm
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import Depends, APIRouter, HTTPException
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from starlette import status
+from decouple import config
 
 from database.users import UserDatabase
-from models import User
+from models import Token, User
 import security
 
 
 router = APIRouter(
     prefix="/user",
     tags=["user"],
-    default_response_class=HTMLResponse,
 )
 
-database_name = "sqlite.db"
-users_database = UserDatabase(database_name=database_name)
+database_path = config("database_path")
+blog_database = UserDatabase(database_path=database_path)
 
-router.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="user/login")
 
 
-@router.get("/login", response_class=HTMLResponse)
-async def get_login_form(request: Request):
-    current_user = security.get_current_user(request)
-    if current_user is None:
-        return templates.TemplateResponse("users/login.html", {"request": request})
+@router.post("/singup")
+async def post_singup_form(form_data: OAuth2PasswordRequestForm = Depends()):
+    if users_database.username_is_taken(form_data.username):
+        return {"success": "False", "detail": "username is already taken"}
     else:
-        return RedirectResponse(url='/blog/')
+        hashed_password = security.get_password_hash(form_data.password)
+        user = User(
+            username=form_data.username,
+            hashed_password=hashed_password
+        )
+        users_database.insert_new_user(user)
+        return {"success": "True", "detail": "successfully singed up"}
 
 
-@router.post("/login", response_class=HTMLResponse)
-async def post_login_form(request: Request,
-                          form_data: OAuth2PasswordRequestForm = Depends()):
-    current_user = security.get_current_user(request)
-    if current_user is None:
-        authorized_user = security.authenticate_user(username=form_data.username,
-                                                     password=form_data.password)
-        if not authorized_user:
-            response = templates.TemplateResponse("users/login.html", {"request": request,
-                                                                       "login_status": False})
-        else:
-            response = templates.TemplateResponse("users/login.html", {"request": request,
-                                                                       "login_status": True})
-            security.get_access_token(response=response, user=authorized_user)
-        return response
-    else:
-        return RedirectResponse(url='/blog/')
+
+@router.post("/login", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = security.authenticate_user(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = security.get_access_token(user=user)
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.get("/singup", response_class=HTMLResponse)
-async def get_singup_form(request: Request):
-    current_user = security.get_current_user(request)
-    if current_user is None:
-        return templates.TemplateResponse("users/register.html", {"request": request})
-    else:
-        return RedirectResponse(url='/blog/')
-
-
-@router.post("/singup", response_class=HTMLResponse)
-async def post_singup_form(request: Request,
-                           form_data: OAuth2PasswordRequestForm = Depends()):
-    current_user = security.get_current_user(request)
-    if current_user is None:
-        if users_database.username_is_taken(form_data.username):
-            success = False
-        else:
-            hashed_password = security.get_password_hash(form_data.password)
-            user = User(
-                username=form_data.username,
-                hashed_password=hashed_password
-            )
-            users_database.insert_new_user(user)
-            success = True
-        return templates.TemplateResponse("users/register.html", {"request": request,
-                                                                  "success": success})
-    else:
-        return RedirectResponse(url='/blog/')
-
-
-@router.get("/logout", response_class=HTMLResponse)
-async def get_logaut(request: Request):
-    current_user = security.get_current_user(request)
-    response = RedirectResponse(url='/blog/')
-    if current_user:
-        security.log_out(response)
-    return response
+@router.get("/me")
+async def get_current_user(current_user: User = Depends(security.get_current_user)):
+    return current_user
