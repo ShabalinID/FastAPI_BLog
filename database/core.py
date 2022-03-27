@@ -1,4 +1,3 @@
-import sqlite3
 import aiosqlite
 
 
@@ -20,18 +19,24 @@ class CoreDB:
         db = await self.get_database_connection()
         await db.execute(sql, values)
         await db.commit()
+        await db.close()
 
     async def select_fetchall(self, sql, data=None):
-        select = await self.cursor.execute(sql, data).fetchall()
+        db = await self.get_database_connection()
+        cursor = await db.execute(sql, data)
+        select = await cursor.fetchall()
+        await db.close()
         return select
 
     async def select_fetchone(self, sql, data=None):
-        select = await self.cursor.execute(sql, data).fetchone()
+        db = await self.get_database_connection()
+        cursor = await db.execute(sql, data)
+        select = await cursor.fetchone()
+        await db.close()
         return select
 
     async def delete(self, sql, data=None):
-        await self.cursor.execute(sql, data)
-        await self.cursor.commit()
-
-    # def __del__(self):
-    #     self.db.close()
+        db = await self.get_database_connection()
+        await db.execute(sql, data)
+        await db.commit()
+        await db.close()
